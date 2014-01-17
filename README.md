@@ -1,12 +1,12 @@
 VideoBatch
 ===========
 
-This MapReduce application processes video files on Hadoop clusters. It implements input formats and record readers by wrapping [Xuggler][http://xuggle.com/].
+This MapReduce application processes video files on Hadoop clusters. It implements input formats and record readers by wrapping [Xuggler](http://xuggle.com/).
 
 Instructions
 ------------
 
-* Download and build Xuggler 5.4 following the installation instruction [here][http://xuggle.com/xuggler/build]. You will have to do this on each node of your cluster.
+* Download and build Xuggler 5.4 following the installation instruction [here](http://xuggle.com/xuggler/build). You will have to do this on each node of your cluster.
 * Link or copy built xuggle-\*.jar to lib directory of the Hadoop installation on each cluster node.
 * Download or clone VideoBatch source code and run `mvn install`.
 * Copy a video file to HDFS. The video file should be encoded with keyframes at reasonable intervals. 
