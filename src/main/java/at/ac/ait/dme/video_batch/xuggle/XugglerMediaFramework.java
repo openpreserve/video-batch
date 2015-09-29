@@ -1,6 +1,7 @@
 package at.ac.ait.dme.video_batch.xuggle;
 
 import at.ac.ait.dme.video_batch.AVMediaFramework;
+
 import com.xuggle.xuggler.ICodec;
 import com.xuggle.xuggler.IContainer;
 import com.xuggle.xuggler.IError;
@@ -8,10 +9,13 @@ import com.xuggle.xuggler.IIndexEntry;
 import com.xuggle.xuggler.IStream;
 import com.xuggle.xuggler.IStreamCoder;
 import com.xuggle.xuggler.io.URLProtocolManager;
+
 import java.math.BigInteger;
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -160,6 +164,16 @@ public class XugglerMediaFramework implements AVMediaFramework {
 
 	    all_indices.put( container.getFileSize(), -1L );
 	    LOG.debug( "all_indices.size = " + all_indices.size() );
+	    
+	    //
+	    for(Map.Entry<Long,Long> entry : all_indices.entrySet()) {
+	      Long key = entry.getKey();
+	      Long value = entry.getValue();
+
+	      System.out.println(key + " => " + value);
+	    }
+	    //
+	    
         return all_indices;
     }
 

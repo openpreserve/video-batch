@@ -176,9 +176,12 @@ public class AVPacketRecordReader extends RecordReader<IntWritable, AVPacket> {
         // if obj is still no video packet, there is no video packet
         //if( obj.getStreamType() != AVPacket.StreamType.VIDEO ) return false;
         
-        if( !obj.isDecoded())
-            in.decode( obj );
-        
+        try {
+	        if( !obj.isDecoded())
+	            in.decode( obj );
+        } catch (Exception e) {
+        	LOG.warn("Error decoding AVPacket: "+e);
+        }
         /*
         value = obj.getBufferedImage();
         

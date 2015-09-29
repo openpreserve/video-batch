@@ -1,8 +1,10 @@
 package at.ac.ait.dme.video_batch;
 
+import java.io.BufferedReader;
 import java.io.File;
-
 import java.io.IOException;
+import java.io.InputStreamReader;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -10,6 +12,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
@@ -23,240 +26,293 @@ import java.util.Map.Entry;
 import java.util.TreeMap;
 
 /**
- * Base class for a video processing MapReduce job. 
+ * Base class for a video processing MapReduce job.
  * 
- * @author Matthias Rella, DME-AIT
+ * @author Matthias Rella, DME-AITma
  */
 public abstract class VideoBatch extends Configured implements Tool {
 
-    private static final Log LOG = LogFactory.getLog(VideoBatch.class);
+	private static final Log LOG = LogFactory.getLog(VideoBatch.class);
 
-    /**
-     * Input file on hdfs
-     */
-    protected Path file_on_hdfs;
+	/**
+	 * Input file on hdfs
+	 */
+	protected Path file_on_hdfs;
 
-    /**
-     * media framework for handling input media file
-     */
-    protected AVMediaFramework mfw;
+	/**
+	 * media framework for handling input media file
+	 */
+	protected AVMediaFramework mfw;
 
-    /**
-     * Kinds of splitsize calculation.
-     * POWER_OF_2 sets split sizes of 2^x
-     * ANY sets split size to any positive value
-     */
-    protected static enum Splitsize {POWER_OF_2, ANY};
+	/**
+	 * Kinds of splitsize calculation. POWER_OF_2 sets split sizes of 2^x ANY sets
+	 * split size to any positive value
+	 */
+	protected static enum Splitsize {
+		POWER_OF_2, ANY
+	};
 
-    /**
-     * Type of splitsize calculation to use
-     */
-    protected Splitsize splitsizeType = Splitsize.POWER_OF_2;
+	/**
+	 * Type of splitsize calculation to use
+	 */
+	protected Splitsize splitsizeType = Splitsize.POWER_OF_2;
 
-    /**
-     * Size of the InputSplits that will be distributed by MapReduce.
-     */
-    protected long splitsize = 0; 
+	/**
+	 * Size of the InputSplits that will be distributed by MapReduce.
+	 */
+	protected long splitsize = 0;
 
+	/**
+	 * Parse arguments and perform setting of member variable if needed.
+	 * 
+	 * @param args
+	 *          input arguments
+	 * @throws IOException
+	 */
+	protected void parseArguments(String[] args) throws IOException {
+	}
 
-    /**
-     * Parse arguments and perform setting of member variable if needed.
-     * 
-     * @param args input arguments
-     * @throws IOException 
-     */
-    protected void parseArguments( String[] args ) throws IOException {
+	/**
+	 * Peforms several preprocessing and configuration steps and finally runs
+	 * MapReduce. The steps are:
+	 * <ol>
+	 * <li>Parse input directory and files and create uniform input file array
+	 * 
+	 * @param args
+	 * @return
+	 * @throws Exception
+	 */
+
+	public final int run(String[] args) throws Exception {
+
+		if (args.length < 1)
+			throw new IllegalArgumentException("Name of input file missing");
+
+		//rainer
+		//file_on_hdfs = new Path(args[0]);
+		file_on_hdfs = new Path(args[1]);
+		
+		Configuration conf = getConf();
+
+		FileSystem fs = FileSystem.get(conf);
+
+		LOG.info("name: " + fs.getName() + " scheme: " + fs.getScheme()
+				+ "working dir: " + fs.getWorkingDirectory());
+		
+		for(int i = 0; i<args.length; i++) {
+			System.out.println("args "+i+" = "+args[i]);
+		}
+		
+		// testin
+
+		/*
+		FileStatus[] status = fs.listStatus(new Path(
+				"hdfs://localhost:8020/user/rainer")); // you need to pass in your hdfs
+																								// path
+
+    Path[] paths = FileUtil.stat2Paths(status);
+    System.out.println("***** Contents of the Directory *****");
+    for(Path path : paths)
+    {
+      System.out.println(path);
     }
+		 */
+		
+    /*
+		for (int i = 0; i < status.length; i++) {
+			
+			BufferedReader br = new BufferedReader(new InputStreamReader(
+					fs.open(status[i].getPath())));
+			String line;
+			line = br.readLine();
+			while (line != null) {
+				System.out.println(":: "+line);
+				line = br.readLine();
+			}
+		}
+		*/
+		//
 
-    /**
-     * Peforms several preprocessing and configuration steps and finally runs MapReduce.
-     * The steps are:
-     * <ol>
-     *  <li> Parse input directory and files and create uniform input file array
-     * @param args
-     * @return
-     * @throws Exception 
-     */
+		if (!fs.exists(file_on_hdfs))
+			throw new IllegalArgumentException("Input file does not exist on hdfs");
 
-    public final int run(String[] args) throws Exception {
+		// prevent parsing the -libjars option
+		//rainer: if (args.length > 1 && !args[1].startsWith("-"))
+		if (args.length > 2 && !args[2].startsWith("-"))
+			splitsize = Long.parseLong(args[1]);
 
-        if (args.length < 1)
-            throw new IllegalArgumentException( "Name of input file missing");
-        
-        file_on_hdfs = new Path(args[0]);
+		parseArguments(args);
 
-        Configuration conf = getConf();
+		// show block locations of file
+		if (LOG.isDebugEnabled()) {
+			FileStatus fstat = fs.getFileStatus(file_on_hdfs);
+			BlockLocation[] locations = fs.getFileBlockLocations(fstat, 0,
+					fstat.getLen());
+			LOG.debug("Block Locations of " + file_on_hdfs.toString() + ":");
+			for (BlockLocation loc : locations)
+				LOG.debug(loc);
+		}
 
-        FileSystem fs = FileSystem.get(conf);
+		mfw = getMediaFramework();
+		mfw.init(file_on_hdfs.makeQualified(fs).toUri());
 
-        if( !fs.exists(file_on_hdfs) )
-            throw new IllegalArgumentException( "Input file does not exist on hdfs");
+		TreeMap<Long, Long> indices = mfw.getIndices(true);
 
-        if( args.length > 1 )
-            splitsize = Long.parseLong( args[1] ); 
+		File index_file = serializeIndices(indices);
 
-        parseArguments( args );
+		String index_file_path = fs.getHomeDirectory().toString();
+		String index_file_prefix = "cache_file_";
 
-        // show block locations of file
-        if (LOG.isDebugEnabled()) {
-            FileStatus fstat = fs.getFileStatus(file_on_hdfs);
-            BlockLocation[] locations = fs.getFileBlockLocations( fstat, 0, fstat.getLen());
-            LOG.debug("Block Locations of " + file_on_hdfs.toString() + ":");
-            for (BlockLocation loc : locations)
-                LOG.debug(loc);
-        }
+		conf.set("video_batch.index_file_path", index_file_path);
+		conf.set("video_batch.index_file_prefix", index_file_prefix);
 
-        mfw = getMediaFramework();
-        mfw.init(file_on_hdfs.makeQualified(fs).toUri());
+		String dest_cache_filename = index_file_path + Path.SEPARATOR
+				+ index_file_prefix + file_on_hdfs.getName();
 
-        TreeMap<Long, Long> indices = mfw.getIndices(true);
+		// add index_file to distributed cache
+		// job.addCacheFile(index_file_uri);
+		// hadoop 0.20 way:
+		// copy Index file to HDFS and store filename in conf property
+		// DistributedCache is not used because it does not work in
+		// RecordReader
 
-        File index_file = serializeIndices( indices ); 
-        
-        String index_file_path = fs.getHomeDirectory().toString();
-        String index_file_prefix = "cache_file_";
+		// does not work:
+		// DistributedCache.addCacheFile(new URI( dest_cache_filename ), conf);
 
-        conf.set("video_batch.index_file_path", index_file_path);
-        conf.set("video_batch.index_file_prefix", index_file_prefix);
-        
-        String dest_cache_filename = index_file_path + Path.SEPARATOR
-                + index_file_prefix + file_on_hdfs.getName();
+		fs.copyFromLocalFile(false, true, new Path(index_file.getAbsolutePath()),
+				new Path(dest_cache_filename));
 
-        // add index_file to distributed cache
-        // job.addCacheFile(index_file_uri);
-        // hadoop 0.20 way:
-        // copy Index file to HDFS and store filename in conf property
-        // DistributedCache is not used because it does not work in
-        // RecordReader
+		conf.set("video_batch.codec", mfw.getCodecPackageName());
 
-        // does not work:
-        // DistributedCache.addCacheFile(new URI( dest_cache_filename ), conf);
+		configure(conf);
 
-        fs.copyFromLocalFile(false, true, 
-                new Path(index_file.getAbsolutePath()), 
-                new Path(dest_cache_filename));
+		// conf.set("video_batch.stream_encodings", streamEncodings.toString());
+		Job job = new Job(conf);
 
-        conf.set("video_batch.codec", mfw.getCodecPackageName());
+		setupJob(job);
+		// TODO: check before starting hadoop-process:
+		// * Inputfile contains video stream(s)
+		// * MediaFramework can decode video
+		// * and other stuff which is done in demo DecodeAndPlayVideo.java
 
-        configure(conf);
+		if (getSplitsize() > 0)
+			FileInputFormat.setMaxInputSplitSize(job, getSplitsize());
 
-        //conf.set("video_batch.stream_encodings", streamEncodings.toString());
-        Job job = new Job(conf);
+		FileInputFormat.setInputPaths(job, file_on_hdfs);
+		FileOutputFormat.setOutputPath(job, new Path("output"));
 
-        setupJob(job);
-        // TODO: check before starting hadoop-process:
-        // * Inputfile contains video stream(s)
-        // * MediaFramework can decode video
-        // * and other stuff which is done in demo DecodeAndPlayVideo.java
+		job.waitForCompletion(true);
+		return 0;
+	}
 
-        if( getSplitsize() > 0)
-                FileInputFormat.setMaxInputSplitSize(job, getSplitsize() );
+	/**
+	 * Gets splitsize of InputSplits for this MapReduce job. It either returns the
+	 * splitsize set by input arguments in main method or calculates it by size
+	 * and length of GOP of the input media file. Splitsize may affect performance
+	 * of the job.
+	 * 
+	 * @return long the splitsize value
+	 */
+	protected long getSplitsize() {
 
-        FileInputFormat.setInputPaths(job, file_on_hdfs);
-        FileOutputFormat.setOutputPath(job, new Path("output"));
+		// splitsize may be > 0 if set by input parameter
+		if (splitsize > 0)
+			return splitsize;
 
-        job.waitForCompletion(true);
-        return 0;
-    }
+		// get average gop size in bytes
+		long avg_gop_size = mfw.getAvgGOPSize();
+		LOG.info("Mean GOP size in bytes: " + avg_gop_size);
 
-    /**
-     * Gets splitsize of InputSplits for this MapReduce job. 
-     * It either returns the splitsize set by input arguments in main method
-     * or calculates it by size and length of GOP of the input media file.
-     * Splitsize may affect performance of the job. 
-     * 
-     * @return long the splitsize value
-     */
-    protected long getSplitsize( ) {
+		// get average gop length in bytes
+		long avg_gop_length = mfw.getAvgGOPLength();
+		LOG.info("Mean frames per GOP: " + avg_gop_length);
 
-        // splitsize may be > 0 if set by input parameter
-        if( splitsize > 0 ) return splitsize;
+		// calculate optimal inputsplit size
 
-        // get average gop size in bytes
-        long avg_gop_size = mfw.getAvgGOPSize();
-        LOG.info("Mean GOP size in bytes: " + avg_gop_size);
+		// minimum number of frames one node should process (should take at least 1
+		// min)
+		int min_work_frames = 60000;
 
-        // get average gop length in bytes
-        long avg_gop_length = mfw.getAvgGOPLength();
-        LOG.info("Mean frames per GOP: " + avg_gop_length);
+		// if split size should be a power of 2:
+		switch (splitsizeType) {
+		case ANY:
+			if (avg_gop_length > 0)
+				splitsize = (int) (avg_gop_size * Math.ceil(min_work_frames
+						/ (double) avg_gop_length));
+			break;
 
-        // calculate optimal inputsplit size 
+		case POWER_OF_2:
+		default:
+			int e = 20; // start at 1 MB
+			while ((splitsize = (long) Math.pow(2, e)) <= avg_gop_size
+					* Math.ceil(min_work_frames / (double) avg_gop_length))
+				e++;
+			break;
+		}
 
-        // minimum number of frames one node should process (should take at least 1 min)
-        int min_work_frames = 60000;
+		return splitsize;
+	}
 
-        // if split size should be a power of 2:
-        switch( splitsizeType ) {
-            case ANY:
-                if( avg_gop_length > 0 ) splitsize = (int)(avg_gop_size *
-                Math.ceil( min_work_frames / (double)avg_gop_length ));
-                break;
+	/**
+	 * Serialization method used for Hadoop v.0.20.2 where indices need to be
+	 * stored to an hdfs file.
+	 * 
+	 * @param indices
+	 *          TreeMap of indices
+	 * @return File local (temporary) file containing serialized indices
+	 * @throws IOException
+	 *           matters of file operations
+	 */
+	protected File serializeIndices(TreeMap<Long, Long> indices)
+			throws IOException {
+		File index_file = File.createTempFile("indices_", ".tmp");
 
-            case POWER_OF_2:
-            default:
-                int e = 20; // start at 1 MB
-                while ((splitsize = (long) Math.pow(2, e)) <= avg_gop_size
-                        * Math.ceil(min_work_frames / (double) avg_gop_length))
-                    e++;
-                break;
-        }
+		if (LOG.isDebugEnabled()) {
+			String output = "All Indices: Size " + indices.size() + " sorted:";
+			Iterator<Entry<Long, Long>> it = indices.entrySet().iterator();
+			while (it.hasNext())
+				output += it.next() + "\n";
+			LOG.debug(output);
+		}
 
-        return splitsize;
-    }
+		// serialize indices-list into file
 
-    /**
-     * Serialization method used for Hadoop v.0.20.2 where indices need to be stored to an hdfs file.
-     * 
-     * @param indices TreeMap of indices
-     * @return File local (temporary) file containing serialized indices 
-     * @throws IOException matters of file operations
-     */
-    protected File serializeIndices(TreeMap<Long, Long> indices) throws IOException {
-        File index_file = File.createTempFile("indices_", ".tmp" );
+		FileOutputStream fos = new FileOutputStream(index_file);
+		ObjectOutputStream oos = new ObjectOutputStream(fos);
+		oos.writeObject(indices);
 
-        if( LOG.isDebugEnabled() ) {
-	        String output = "All Indices: Size " + indices.size() + " sorted:";
-	        Iterator<Entry<Long,Long>> it = indices.entrySet().iterator();
-	        while( it.hasNext() ) 
-	            output += it.next() + "\n";
-	        LOG.debug( output );
-        }
-        
-        // serialize indices-list into file
-        
-        FileOutputStream fos = new FileOutputStream( index_file );
-        ObjectOutputStream oos = new ObjectOutputStream(fos);
-        oos.writeObject( indices );
-        
-        oos.flush();
-        oos.close();
-        
-        fos.flush();
-        fos.close();
+		oos.flush();
+		oos.close();
 
-        return index_file;
-    }
+		fos.flush();
+		fos.close();
 
-    /**
-     * Quasi factory method to get a concrete MediaFramework.
-     * 
-     * @return MediaFramework framework to use in this job
-     */
-    abstract protected AVMediaFramework getMediaFramework();
+		return index_file;
+	}
 
-    /**
-     * Specifies job parameters.
-     * 
-     * @param job MapReduce job to be setup
-     */
-    abstract protected void setupJob(Job job);
+	/**
+	 * Quasi factory method to get a concrete MediaFramework.
+	 * 
+	 * @return MediaFramework framework to use in this job
+	 */
+	abstract protected AVMediaFramework getMediaFramework();
 
-    /**
-     * More configuration setting can be set via this method.
-     * @param conf Configuration instance of the job
-     */
-    protected void configure(Configuration conf) {
+	/**
+	 * Specifies job parameters.
+	 * 
+	 * @param job
+	 *          MapReduce job to be setup
+	 */
+	abstract protected void setupJob(Job job);
 
-    }
+	/**
+	 * More configuration setting can be set via this method.
+	 * 
+	 * @param conf
+	 *          Configuration instance of the job
+	 */
+	protected void configure(Configuration conf) {
+
+	}
 
 }
