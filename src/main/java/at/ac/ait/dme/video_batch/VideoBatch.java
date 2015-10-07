@@ -18,9 +18,16 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
+//import org.slf4j.Logger;
 
 import java.io.FileOutputStream;
 import java.io.ObjectOutputStream;
+import java.net.URL;
+import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.TreeMap;
@@ -45,8 +52,8 @@ public abstract class VideoBatch extends Configured implements Tool {
 	protected AVMediaFramework mfw;
 
 	/**
-	 * Kinds of splitsize calculation. POWER_OF_2 sets split sizes of 2^x ANY sets
-	 * split size to any positive value
+	 * Kinds of splitsize calculation. POWER_OF_2 sets split sizes of 2^x ANY
+	 * sets split size to any positive value
 	 */
 	protected static enum Splitsize {
 		POWER_OF_2, ANY
@@ -66,17 +73,17 @@ public abstract class VideoBatch extends Configured implements Tool {
 	 * Parse arguments and perform setting of member variable if needed.
 	 * 
 	 * @param args
-	 *          input arguments
+	 *            input arguments
 	 * @throws IOException
 	 */
 	protected void parseArguments(String[] args) throws IOException {
 	}
 
 	/**
-	 * Peforms several preprocessing and configuration steps and finally runs
+	 * Performs several preprocessing and configuration steps and finally runs
 	 * MapReduce. The steps are:
 	 * <ol>
-	 * <li>Parse input directory and files and create uniform input file array
+	 * <li>Parse input directorclazzy and files and create uniform input file array
 	 * 
 	 * @param args
 	 * @return
@@ -85,61 +92,63 @@ public abstract class VideoBatch extends Configured implements Tool {
 
 	public final int run(String[] args) throws Exception {
 
-		if (args.length < 1)
+		//LogManager.getRootLogger().setLevel(Level.DEBUG);
+		Enumeration e = LogManager.getCurrentLoggers();
+		while (e.hasMoreElements()) {
+			Logger l = (Logger) e.nextElement();
+			System.out.println("L found:" + l.getName() + " debug: "
+					+ l.isDebugEnabled());
+		}
+		Logger log4jLogger = LogManager.getLogger("at.ac.ait.dme.video_batch.VideoBatch");
+		log4jLogger.setLevel(Level.DEBUG);
+		
+
+		/*
+		 * String[] names = LogFactory.getFactory().getAttributeNames();
+		 * for(String name : names) { Object value =
+		 * LogFactory.getFactory().getAttribute(name);
+		 * System.out.println("LOG: "+name+"="+value); }
+		 */
+
+		if (args.length < 2)
 			throw new IllegalArgumentException("Name of input file missing");
 
-		//rainer
-		//file_on_hdfs = new Path(args[0]);
+		// rainer
+		// file_on_hdfs = new Path(args[0]);
 		file_on_hdfs = new Path(args[1]);
-		
+
 		Configuration conf = getConf();
 
 		FileSystem fs = FileSystem.get(conf);
 
-		LOG.info("name: " + fs.getName() + " scheme: " + fs.getScheme()
-				+ "working dir: " + fs.getWorkingDirectory());
-		
-		for(int i = 0; i<args.length; i++) {
-			System.out.println("args "+i+" = "+args[i]);
+		System.out.println("name: " + fs.getName() + " scheme: "
+				+ fs.getScheme() + "working dir: " + fs.getWorkingDirectory());
+
+		for (int i = 0; i < args.length; i++) {
+			System.out.println("args " + i + " = " + args[i]);
 		}
-		
-		// testin
+
+		System.out.println("Logging - is debug enabled: "
+				+ LOG.isDebugEnabled());
 
 		/*
-		FileStatus[] status = fs.listStatus(new Path(
-				"hdfs://localhost:8020/user/rainer")); // you need to pass in your hdfs
-																								// path
-
-    Path[] paths = FileUtil.stat2Paths(status);
-    System.out.println("***** Contents of the Directory *****");
-    for(Path path : paths)
-    {
-      System.out.println(path);
-    }
+		 * FileStatus[] status = fs.listStatus(new Path(
+		 * "hdfs://localhost:8020/user/rainer")); // you need to pass in your
+		 * hdfs // path
+		 * 
+		 * Path[] paths = FileUtil.stat2Paths(status);
+		 * System.out.println("***** Contents of the Directory *****"); for(Path
+		 * path : paths) { System.out.println(path); }
 		 */
-		
-    /*
-		for (int i = 0; i < status.length; i++) {
-			
-			BufferedReader br = new BufferedReader(new InputStreamReader(
-					fs.open(status[i].getPath())));
-			String line;
-			line = br.readLine();
-			while (line != null) {
-				System.out.println(":: "+line);
-				line = br.readLine();
-			}
-		}
-		*/
-		//
 
 		if (!fs.exists(file_on_hdfs))
-			throw new IllegalArgumentException("Input file does not exist on hdfs");
+			throw new IllegalArgumentException(
+					"Input file does not exist on hdfs");
 
 		// prevent parsing the -libjars option
-		//rainer: if (args.length > 1 && !args[1].startsWith("-"))
+		// rainer: if (args.length > 1 && !args[1].startsWith("-"))
 		if (args.length > 2 && !args[2].startsWith("-"))
-			splitsize = Long.parseLong(args[1]);
+			splitsize = Long.parseLong(args[2]);
 
 		parseArguments(args);
 
@@ -179,8 +188,9 @@ public abstract class VideoBatch extends Configured implements Tool {
 		// does not work:
 		// DistributedCache.addCacheFile(new URI( dest_cache_filename ), conf);
 
-		fs.copyFromLocalFile(false, true, new Path(index_file.getAbsolutePath()),
-				new Path(dest_cache_filename));
+		fs.copyFromLocalFile(false, true,
+				new Path(index_file.getAbsolutePath()), new Path(
+						dest_cache_filename));
 
 		conf.set("video_batch.codec", mfw.getCodecPackageName());
 
@@ -206,10 +216,10 @@ public abstract class VideoBatch extends Configured implements Tool {
 	}
 
 	/**
-	 * Gets splitsize of InputSplits for this MapReduce job. It either returns the
-	 * splitsize set by input arguments in main method or calculates it by size
-	 * and length of GOP of the input media file. Splitsize may affect performance
-	 * of the job.
+	 * Gets splitsize of InputSplits for this MapReduce job. It either returns
+	 * the splitsize set by input arguments in main method or calculates it by
+	 * size and length of GOP of the input media file. Splitsize may affect
+	 * performance of the job.
 	 * 
 	 * @return long the splitsize value
 	 */
@@ -229,7 +239,8 @@ public abstract class VideoBatch extends Configured implements Tool {
 
 		// calculate optimal inputsplit size
 
-		// minimum number of frames one node should process (should take at least 1
+		// minimum number of frames one node should process (should take at
+		// least 1
 		// min)
 		int min_work_frames = 60000;
 
@@ -258,10 +269,10 @@ public abstract class VideoBatch extends Configured implements Tool {
 	 * stored to an hdfs file.
 	 * 
 	 * @param indices
-	 *          TreeMap of indices
+	 *            TreeMap of indices
 	 * @return File local (temporary) file containing serialized indices
 	 * @throws IOException
-	 *           matters of file operations
+	 *             matters of file operations
 	 */
 	protected File serializeIndices(TreeMap<Long, Long> indices)
 			throws IOException {
@@ -272,7 +283,7 @@ public abstract class VideoBatch extends Configured implements Tool {
 			Iterator<Entry<Long, Long>> it = indices.entrySet().iterator();
 			while (it.hasNext())
 				output += it.next() + "\n";
-			LOG.debug(output);
+			//LOG.debug(output);
 		}
 
 		// serialize indices-list into file
@@ -301,7 +312,7 @@ public abstract class VideoBatch extends Configured implements Tool {
 	 * Specifies job parameters.
 	 * 
 	 * @param job
-	 *          MapReduce job to be setup
+	 *            MapReduce job to be setup
 	 */
 	abstract protected void setupJob(Job job);
 
@@ -309,7 +320,7 @@ public abstract class VideoBatch extends Configured implements Tool {
 	 * More configuration setting can be set via this method.
 	 * 
 	 * @param conf
-	 *          Configuration instance of the job
+	 *            Configuration instance of the job
 	 */
 	protected void configure(Configuration conf) {
 

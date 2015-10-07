@@ -8,7 +8,8 @@ import at.ac.ait.dme.video_batch.hadoop20workaround.SplitCompressionInputStream;
 
 //import org.apache.hadoop.io.compress.SplitCompressionInputStream;
 
-public abstract class AVInputStream extends SplitCompressionInputStream{
+//rainer: public abstract class AVInputStream extends SplitCompressionInputStream{
+public abstract class AVInputStream extends org.apache.hadoop.io.compress.SplitCompressionInputStream {
 
     public AVInputStream(InputStream in, long start, long end)
             throws IOException {

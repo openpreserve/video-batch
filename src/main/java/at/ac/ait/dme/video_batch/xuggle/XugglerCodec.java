@@ -11,12 +11,12 @@ import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
+import org.apache.hadoop.io.compress.SplitCompressionInputStream;
 import org.omg.CORBA.portable.IndirectionException;
 
-import at.ac.ait.dme.video_batch.hadoop20workaround.SplitCompressionInputStream;
-import at.ac.ait.dme.video_batch.hadoop20workaround.SplittableCompressionCodec;
 //import org.apache.hadoop.io.compress.SplitCompressionInputStream;
 //import org.apache.hadoop.io.compress.SplittableCompressionCodec;
+import org.apache.hadoop.io.compress.SplittableCompressionCodec;
 
 /**
  * Implements a codec for splitted input streams to be used by Xuggler.

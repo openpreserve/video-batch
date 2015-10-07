@@ -12,14 +12,16 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.Decompressor;
+import org.apache.hadoop.io.compress.SplitCompressionInputStream;
+import org.apache.hadoop.io.compress.SplittableCompressionCodec;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 
-import at.ac.ait.dme.video_batch.hadoop20workaround.SplitCompressionInputStream;
-import at.ac.ait.dme.video_batch.hadoop20workaround.SplittableCompressionCodec;
+//rainer: import at.ac.ait.dme.video_batch.hadoop20workaround.SplitCompressionInputStream;
+//rainer: import at.ac.ait.dme.video_batch.hadoop20workaround.SplittableCompressionCodec;
 
 /**
  * Reads frame numbers and AVPackets from an underlying compressed audio-video stream.

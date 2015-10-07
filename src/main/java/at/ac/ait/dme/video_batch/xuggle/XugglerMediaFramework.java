@@ -170,7 +170,8 @@ public class XugglerMediaFramework implements AVMediaFramework {
 	      Long key = entry.getKey();
 	      Long value = entry.getValue();
 
-	      System.out.println(key + " => " + value);
+	      LOG.debug("Analalyzing indices: position (bytes) => timestamp (e.g. ms)");
+	      LOG.debug(key + " => " + value);
 	    }
 	    //
 	    

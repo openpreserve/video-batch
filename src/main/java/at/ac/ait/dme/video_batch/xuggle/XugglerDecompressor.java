@@ -103,7 +103,7 @@ public class XugglerDecompressor implements Decompressor {
     }
 
     public boolean needsDictionary() {
-        return indices == null || indices.isEmpty();
+       return indices == null || indices.isEmpty();
     }
 
     public boolean finished() {

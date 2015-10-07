@@ -321,7 +321,7 @@ public class XugglerInputStream extends AVInputStream {
             info += String.format("frame-rate: %5.2f; ", coder.getFrameRate()
                     .getDouble());
         }
-        LOG.debug(info);
+        LOG.info(info);
     }
 
     private void printPacketInfo(IPacket packet) {

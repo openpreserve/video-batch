@@ -46,9 +46,9 @@ public class SimpleVideoBatch extends VideoBatch {
 
     @Override
     protected void parseArguments(String[] args) {
-        if (args.length > 2) {
+    	if (args.length > 3) {
         	try {
-            delay = Integer.parseInt(args[1]);
+            delay = Integer.parseInt(args[3]);
             LOG.info("Setting mapping delay: " + delay);
         	} catch(Exception e) {
         		LOG.info("No mapping delay set");
