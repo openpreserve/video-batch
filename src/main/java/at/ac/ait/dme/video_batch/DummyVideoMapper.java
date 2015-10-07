@@ -1,5 +1,6 @@
 package at.ac.ait.dme.video_batch;
 
+import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -14,11 +15,20 @@ import javax.imageio.stream.ImageOutputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
+
+import at.ac.ait.dme.video_batch.hbase.RGBTable;
 
 /**
  * DummyVideoMapper contains Mapper functionality to be applied for testing purposes.
@@ -119,9 +129,29 @@ public class DummyVideoMapper extends Mapper<IntWritable, AVPacket, Text, IntWri
                 delay = 0;
             }
 
-            dummyDoSomethingForXMilliSeconds(delay);
+            //dummyDoSomethingForXMilliSeconds(delay);
 
             createFrameImageFile( value.getBufferedImage(), Integer.parseInt( key.toString()));
+            
+            int jobId = context.getJobID().getId();
+            BufferedImage image = value.getBufferedImage();
+            int color = image.getRGB(image.getHeight()/2, image.getWidth()/2);
+            Color ccolor = new Color(color);
+            RGBTable rgbTable = RGBTable.getInstance();
+            rgbTable.putRGB("job-"+jobId, ccolor.getRed(), ccolor.getGreen(), ccolor.getBlue(), ccolor.getAlpha());
+
+            //color == 0xAARRGGBB
+            //int r = (argb)&0xFF;         1010 1101 1110 0111 1010 1101 1110 0111
+            //int g = (argb>>8)&0xFF;      1111 1111 1010 1101 1110 0111 1010 1101 
+            //int b = (argb>>16)&0xFF;     1111 1111 1111 1111 1010 1101 1110 0111 
+            //int a = (argb>>24)&0xFF;     1111 1111 1111 1111 1111 1111 1010 1101 
+            //          
+            //System.out.println(" color: "+ Integer.toBinaryString(color));
+            //System.out.println("  c>>8: "+ Integer.toBinaryString(color>>8));
+            //System.out.println(" c>>16: "+ Integer.toBinaryString(color>>16));
+            //System.out.println(" c>>24: "+ Integer.toBinaryString(color>>24));
+            //System.out.println("RGBA: "+((color)&0xFF)+" "+((color>>8)&0xFF)+" "+((color>>16)&0xFF)+" "+((color>>24)&0xFF));
+            //System.out.println("RGBA: "+ccolor.getBlue()+" "+ccolor.getGreen()+" "+ ccolor.getRed()+" "+ccolor.getAlpha());            
 
             LOG.info("'Mapping' frame " + key);
             

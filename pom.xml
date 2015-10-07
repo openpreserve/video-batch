@@ -80,6 +80,12 @@
             <version>1.0.4</version>
             <scope>provided</scope>
         </dependency-->
+		<dependency>
+        	<groupId>org.apache.hbase</groupId>
+          <artifactId>hbase</artifactId>
+          <version>0.94.2-cdh4.2.0</version>
+        <scope>compile</scope>
+        </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
