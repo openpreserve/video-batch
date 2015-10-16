@@ -165,16 +165,19 @@ public class AVPacketRecordReader extends RecordReader<IntWritable, AVPacket> {
         AVPacket obj = null;
         
         obj = in.readPacket();
-        
-        
-        
-        // search for video packet
-        while( obj != null && obj.getStreamType() != AVPacket.StreamType.VIDEO )
+                        
+        //search for valid packet
+        while(obj == null && !in.finished())
+        	obj = in.readPacket();
+        	
+        // search for video packet        	
+        while( obj != null && obj.getStreamType() != AVPacket.StreamType.VIDEO)
             obj = in.readPacket();
         
-        // reached end of stream
-        if( obj == null && in.finished() ) return false;
-        
+        if(  obj == null && in.finished() ) return false;
+
+
+                
         // if obj is still no video packet, there is no video packet
         //if( obj.getStreamType() != AVPacket.StreamType.VIDEO ) return false;
         

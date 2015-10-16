@@ -46,7 +46,8 @@ public class XugglerPacket extends AVPacket {
     public XugglerPacket(IPacket packet, ICodec.Type type) {
         this.packet = packet;
         setPosition(packet.getPosition());
-        setFrameNo(packet.getPts());
+        //setFrameNo(packet.getPts());
+        setFrameNo(packet.getDts());
         switch (type) {
         case CODEC_TYPE_ATTACHMENT:
             this.streamType = AVPacket.StreamType.UNKNOWN;

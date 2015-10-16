@@ -51,6 +51,10 @@ public class XugglerInputStream extends AVInputStream {
     private Type[] streamTypes;
 
     private boolean finished;
+    
+    public static int PACKET_READS_BEFORE_EOF_ASSUMED = 20;
+    
+    private int packetReads = 0;
 
     public XugglerInputStream(InputStream in, long start, long end, long frame_offset, XugglerDecompressor dec)
             throws IOException {
@@ -80,6 +84,7 @@ public class XugglerInputStream extends AVInputStream {
         // IMetaData metadata = container.getMetaData();
         // format.setInputFlag(IContainerFormat.Flags.FLAG_GLOBALHEADER, true);
         // this.container.setParameters(parameters);
+        
         int r = this.container.open( xfsdis, null);
         
         LOG.debug("container.open = " + r);
@@ -131,16 +136,23 @@ public class XugglerInputStream extends AVInputStream {
 
             xpacket = new XugglerPacket(packet,
                     streamTypes[packet.getStreamIndex()]);
-        } else
-            finished = true;
+        } else {
+        		LOG.info("read empty package - tries: "+packetReads++);
+      			LOG.info("packet is: "+packet);
+        		if(packetReads >= PACKET_READS_BEFORE_EOF_ASSUMED) {
+        			LOG.info("assuming no more packets to read - setting finished flag");
+        			finished = true;
+        		}
+        }
 
         if (xpacket != null) {
             // calc position of the packet relative to the whole video
             long pos = xpacket.getPosition() - decompressor.getHeaderSize()
                     + getAdjustedStart();
             xpacket.setPosition(pos);
+            LOG.info("adding frame offest: " + getFrameOffset());            
             xpacket.setFrameNo(xpacket.getFrameNo() + getFrameOffset());
-            LOG.debug("readPacket, frame no " + xpacket.getFrameNo());
+            LOG.info("readPacket, frame no " + xpacket.getFrameNo());
         }
         return xpacket;
     }
@@ -162,6 +174,7 @@ public class XugglerInputStream extends AVInputStream {
         if( xpacket.getStreamType() != AVPacket.StreamType.VIDEO ) return null;
         
         if( !xpacket.isDecoded())
+        	//There is one video packet per Image
             decode( xpacket );
         
         return xpacket.getBufferedImage();
@@ -262,6 +275,7 @@ public class XugglerInputStream extends AVInputStream {
                 return newPic;
             }
         }
+        LOG.warn("Failed to decode Video Packet; Returning null!"); 
         return null;
     }
 
@@ -328,11 +342,13 @@ public class XugglerInputStream extends AVInputStream {
         String packet_info = "";
         packet_info += "Packet: ";
         packet_info += String.format("position = %d;", packet.getPosition());
+        packet_info += String.format("presentation time stamp (pts) = %d;", packet.getPts());
+        packet_info += String.format("decompression time stamp (pts) = %d;", packet.getDts());
         packet_info += String.format("isKey = %s;", packet.isKey());
         packet_info += String.format("stream_index = %d;",
                 packet.getStreamIndex());
         packet_info += String.format("size = %d;", packet.getSize());
-        LOG.debug(packet_info);
+        LOG.info(packet_info);
     }
 
     @Override

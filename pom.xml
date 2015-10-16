@@ -12,8 +12,8 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <!-- >hadoop.version>2.0.0-cdh4.2.0</hadoop.version -->
-        <hadoop.version>2.0.0-cdh4.7.0</hadoop.version>
+        <hadoop.version>2.0.0-cdh4.2.0</hadoop.version>
+        <!-- hadoop.version>2.0.0-cdh4.7.0</hadoop.version -->
     </properties>
     <repositories>
         <repository>
@@ -56,7 +56,8 @@
                 <groupId>org.apache.hadoop</groupId>
                 <artifactId>hadoop-client</artifactId>
                 <version>${hadoop.version}</version>
-                <scope>provided</scope>
+                <!--scope>provided</scope-->
+                <scope>provided</scope>                
             </dependency>
         <!--  
         <dependency>
