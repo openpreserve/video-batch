@@ -72,26 +72,30 @@ public class XugglerInputStream extends AVInputStream {
         // read header 
         fIn.seek(0);
         int b = fIn.read(header, 0, header_size);
-        LOG.debug( "header read, count bytes: " + b );
-        LOG.debug( "after header reading, fIn.pos = " + fIn.getPos() );
+        LOG.info( "header read, count bytes: " + b );
+        LOG.info( "after header reading, fIn.pos = " + fIn.getPos() );
+        LOG.info("creating xfsdis start: "+start+" end "+end);
         
         xfsdis = new XugglerFSDataInputStream(in, start, end);
         
+        LOG.info("setting header");
         xfsdis.setHeader( header );
         
+        LOG.info("making container");
         this.container = IContainer.make();
 
         // IMetaData metadata = container.getMetaData();
         // format.setInputFlag(IContainerFormat.Flags.FLAG_GLOBALHEADER, true);
         // this.container.setParameters(parameters);
         
+        LOG.info("opening container");
         int r = this.container.open( xfsdis, null);
         
-        LOG.debug("container.open = " + r);
+        LOG.info("container.open = " + r);
 
         if (r < 0) {
             IError error = IError.make(r);
-            LOG.debug("error: " + error.getDescription());
+            LOG.info("error: " + error.getDescription());
             throw new IOException( "Could not create Container from given InputStream");
         }
         

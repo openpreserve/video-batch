@@ -110,12 +110,8 @@ public abstract class VideoBatch extends Configured implements Tool {
 		 * System.out.println("LOG: "+name+"="+value); }
 		 */
 
-		if (args.length < 2)
+		if (args.length < 1)
 			throw new IllegalArgumentException("Name of input file missing");
-
-		// rainer
-		// file_on_hdfs = new Path(args[0]);
-		file_on_hdfs = new Path(args[1]);
 
 		Configuration conf = getConf();
 
@@ -141,14 +137,17 @@ public abstract class VideoBatch extends Configured implements Tool {
 		 * path : paths) { System.out.println(path); }
 		 */
 
+		file_on_hdfs = new Path(args[0]);
+
 		if (!fs.exists(file_on_hdfs))
 			throw new IllegalArgumentException(
 					"Input file does not exist on hdfs");
 
 		// prevent parsing the -libjars option
-		// rainer: if (args.length > 1 && !args[1].startsWith("-"))
-		if (args.length > 2 && !args[2].startsWith("-"))
-			splitsize = Long.parseLong(args[2]);
+		if (args.length > 1 && !args[1].startsWith("-")) {
+			splitsize = Long.parseLong(args[1]);
+			LOG.info("Splitsize set to: "+args[1]);
+		}
 
 		parseArguments(args);
 
